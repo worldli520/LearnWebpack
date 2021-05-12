@@ -32,12 +32,12 @@ const cat = new Animal('cat')
 
 #### 2.将JS转义为低版本
 
-先安装`babel-loader`:`npm install babel-loader -D`
+先安装`babel-loader`:`npm install babel-loader -save`
 
 此外还需要配置`babel`，安装以下依赖：
 
 ```javascript
-npm install @babel/core @babel/preset-env @babel/plugin-transform-runtime -D
+npm install @babel/core @babel/preset-env @babel/plugin-transform-runtime
 npm install @babel/runtime @babel/runtime-corejs3
 ```
 
@@ -78,3 +78,109 @@ module.exports = {
 }
 ```
 现在，我们重新执行 `npx webpack --mode=development`，查看 `dist/main.js`，会发现已经被编译成了低版本的JS代码。
+
+##### 在webpack中配置 babel
+
+```javascript
+module.exports = {
+  module: {
+    rules: [
+      {
+        test: /\.jsx?$/,
+        use: {
+          loader: 'babel-loader',
+          options:{
+            presets: ["@babel/preset-env"],
+              plugins: [
+                [
+                  "@babel/plugin-transform-runtime",
+                  {
+                    "corejs": 3
+                  }
+                ]
+              ]
+          }
+        },
+        exclude: /node_modules/ //排除 node_modules 目录
+      }
+    ]
+  }
+}
+```
+
+> 注意事项：
+>
+> + `loader`需要在`module.rules`中配置，`rules`为数组。
+>
+> + `loader`的格式如下：
+>
+>   ```javascript
+>   {
+>     test: /\.jsx?$/,//匹配规则
+>     use: 'babel-loader'
+>   }
+>   ```
+>
+>   只有一个`loader`时也可以向下面这样：
+>
+>   ```javascript
+>   {
+>       test: /\.jsx?$/,
+>       loader: 'babel-loader',
+>       options: {
+>           //...
+>       }
+>   }
+>   ```
+
+#### 3.将打包时的mode配置到`webpack.config.js`
+
+我们在使用 `webpack` 进行打包的时候，一直运行的都是 `npx webpack --mode=development`,
+
+可以将`mode`配置到`webpack.config.js`中：
+
+```javascript
+module.exports = {
+  mode: "development",
+  module: {
+    ////.....
+  }
+}
+```
+
+现在就可以直接使用`npx webpack`直接进行编译。
+
+#### 4.浏览器查看
+
+在我们平时使用打包时，一般都会带上`hash`，相应的html文件需要重新修改引入js文件的名称，现在我们就可以使用`html-webpack-plugin`来自动修改这些。
+
+```
+npm install html-webpack-plugin --save -D
+```
+
+在根目录新建`public`目录，新建`index.html`文件
+
+修改`webpack-config.js`:
+
+```
+const HtmlWebpackPlugin = require('html-webpack-plugin');//引入插件
+module.exports = {
+  mode: "development",//配置打包的模式
+  module: {
+    //.....
+  },
+  plugins: [
+    new HtmlWebpackPlugin({
+      template: './public/index.html',//源文件地址
+      filename: 'index.html', //打包后的文件名
+      minify: {
+        removeAttributeQuotes: false, //是否删除属性的双引号
+        collapseWhitespace: false, //是否折叠空白
+      },
+      // hash: true //是否加上hash，默认是 false
+    })
+  ]
+}
+```
+
+再次执行`npx webpack`,
